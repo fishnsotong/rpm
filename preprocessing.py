@@ -5,6 +5,7 @@ import argparse
 import requests
 import tarfile
 import pandas as pd
+import pickle
 from sklearn.model_selection import train_test_split
 
 from clustering import run_clustering
@@ -532,6 +533,16 @@ def main():
     print("Training set:",len(train_set[0]))
     print("Validation set:", len(val_set[0]))
     print("Test set:", len(test_set[0]))
+
+    # save the data
+    with open(os.path.join(args.output, "train_data.pkl"), "wb") as f:
+        pickle.dump(train_set, f)
+
+    with open(os.path.join(args.output, "val_data.pkl"), "wb") as f:
+        pickle.dump(val_set, f)
+    
+    with open(os.path.join(args.output, "test_data.pkl"), "wb") as f:
+        pickle.dump(test_set, f)
 
     print("Preprocessing complete.")
 
