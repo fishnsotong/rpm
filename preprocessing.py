@@ -4,6 +4,10 @@ import os
 import argparse
 import requests
 import tarfile
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+from clustering import run_clustering
 
 def download_data(url: str, output_dir: str):
     """
@@ -166,7 +170,7 @@ def fasta_parse(fasta_file: str, comment='#'):
 
     return names, sequences
 
-def dedup_sequences(data_tuple):
+def dedup_sequences(data_tuple) -> tuple[list[str], list[str]]:
     """
     Removes duplicate sequences from a tuple containing sequence names and sequences.
 
@@ -368,7 +372,7 @@ def pseudoknot_checker(dbn: str) -> int:
 
     return pseudoknot_state
 
-def add_labels_to_data(data_tuple, input_dir):
+def add_labels_to_data(data_tuple, input_dir) ->tuple:
     """
     Adds classification labels to the RNA sequences in the provided data tuple based on pseudoknot detection.
 
@@ -417,6 +421,80 @@ def add_labels_to_data(data_tuple, input_dir):
 
     return (names, sequences, labels)
 
+def train_val_test_split(data_tuple, cluster_df, test_size=0.2, val_size=0.2, random_state=42):
+    """
+    Splits the data into train, validation, and test sets, ensuring that sequences 
+    from the same cluster are only present in one of the sets.
+
+    Parameters:
+    ----------
+    data_tuple : tuple
+        A tuple where the first element is a list of names, the second element is a list of sequences,
+        and the third element is a list of classification labels.
+    cluster_df : pd.DataFrame
+        A DataFrame with two columns: 'Cluster_Rep' and 'Cluster_Member', where 'Cluster_Member'
+        corresponds to names in the data_tuple.
+    test_size : float
+        Proportion of the data to include in the test split.
+    val_size : float
+        Proportion of the training data to include in the validation split.
+    random_state : int or None
+        Random seed for reproducibility.
+        
+    Returns:
+    -------
+    train_set : tuple
+        A tuple containing names, sequences, and labels for the training set.
+    val_set : tuple
+        A tuple containing names, sequences, and labels for the validation set.
+    test_set : tuple
+        A tuple containing names, sequences, and labels for the test set.
+    """
+
+    # Extract names, sequences, and labels from data_tuple
+    names, sequences, labels = data_tuple
+
+    # Map names to sequences and labels
+    name_to_seq = {name: seq for name, seq in zip(names, sequences)}
+    name_to_label = {name: label for name, label in zip(names, labels)}
+
+    # Get unique clusters
+    clusters = cluster_df['Cluster_Rep'].unique()
+
+    # Split clusters into train and test sets
+    train_clusters, test_clusters = train_test_split(
+        clusters, test_size=test_size, random_state=random_state
+    )
+
+    # Further split the training clusters into train and validation sets
+    train_clusters, val_clusters = train_test_split(
+        train_clusters, test_size=val_size, random_state=random_state
+    )
+
+    # Get names for each set by filtering the cluster_df
+    train_names = cluster_df[cluster_df['Cluster_Rep'].isin(train_clusters)]['Cluster_Member'].tolist()
+    val_names = cluster_df[cluster_df['Cluster_Rep'].isin(val_clusters)]['Cluster_Member'].tolist()
+    test_names = cluster_df[cluster_df['Cluster_Rep'].isin(test_clusters)]['Cluster_Member'].tolist()
+
+    # Retrieve sequences and labels for the names in each set
+    train_set = (
+        [name for name in train_names], 
+        [name_to_seq[name] for name in train_names],
+        [name_to_label[name] for name in train_names]
+    )
+    val_set = (
+        [name for name in val_names], 
+        [name_to_seq[name] for name in val_names],
+        [name_to_label[name] for name in val_names]
+    )
+    test_set = (
+        [name for name in test_names], 
+        [name_to_seq[name] for name in test_names],
+        [name_to_label[name] for name in test_names]
+    )
+
+    return train_set, val_set, test_set
+
 def main():
     # TODO: set up logging
 
@@ -439,9 +517,21 @@ def main():
     # remove duplicate sequences
     data = fasta_write(dedup_sequences(fasta_parse(fasta_file)), os.path.join(args.output, "dedup_rna_sequences.fasta"))
     data = add_labels_to_data(data, args.input)
-    print(data[2])
 
-    # mmseqs clustering: here or in another script?
+    # mmseqs clustering
+    run_clustering(input_fasta=os.path.join(args.output, "dedup_rna_sequences.fasta"), output_dir=args.output, tmp_dir="./tmp")
+
+    # load cluster data
+    cluster_df = pd.read_csv(os.path.join(args.output, "cluster-results_cluster.tsv"), sep="\t",
+                             header=None, names=['Cluster_Rep', 'Cluster_Member'])
+
+    # train, validation, test split
+    train_set, val_set, test_set = train_val_test_split(data, cluster_df, 
+                                                    test_size=0.2, val_size=0.2, random_state=42)
+
+    print("Training set:",len(train_set[0]))
+    print("Validation set:", len(val_set[0]))
+    print("Test set:", len(test_set[0]))
 
     print("Preprocessing complete.")
 
