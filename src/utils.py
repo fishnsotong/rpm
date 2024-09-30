@@ -102,7 +102,7 @@ def pad_encodings(max_length: int, encoded_sequences: list) -> np.ndarray:
 
     # first we find the length of the longest sequence (we chose to do it outside bc we only need to do it once)
     # max_length = max(len(seq) for seq in encoded_sequences)
-    
+
     padded_sequences = []
     for seq in encoded_sequences:
         pad_length = max_length - len(seq)
