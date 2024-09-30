@@ -8,7 +8,7 @@ import pandas as pd
 import pickle
 from sklearn.model_selection import train_test_split
 
-from clustering import run_clustering
+from src.clustering import run_clustering
 
 def download_data(url: str, output_dir: str):
     """
