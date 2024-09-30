@@ -41,4 +41,28 @@ HYPERPARAMS = {
 # hyperparameters for grid search
 
 HYPERPARAMS_GRID = {
+     "logreg": {
+        "C": [0.001, 0.01, 0.1, 1, 10, 100],
+        "penalty": ['l1', 'l2'],
+        "max_iter": [100, 200, 500, 1000],
+        "solver": ["liblinear"],
+    },
+    "random_forest": {
+        "n_estimators": [50, 100, 200, 500],    # number of trees in the forest
+        "max_depth": [None, 10, 20, 30],        # maximum depth of each tree
+        "min_samples_leaf": [1, 2, 4],          # minimum number of samples required to be at a leaf node
+        "min_samples_split": [2, 5, 10],        # minimum number of samples required to split an internal node
+        "bootstrap": [True, False],             # method of selecting samples for training each tree
+        "random_state": 42
+    },
+    "xgboost": {
+        "n_estimators": [50, 100, 200, 500],
+        "max_depth": [3, 6, 10],
+        "learning_rate": [0.001, 0.01, 0.1],
+        "gamma": [0, 0.1, 0.2],
+        "reg_lambda": [1, 10, 100],
+        "subsample": [0.6, 0.8, 1.0],
+        "colsample_bytree": [0.6, 0.8, 1.0],
+        "random_state": 42
+    }
 }
