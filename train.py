@@ -7,6 +7,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
+from models.custom import NeuralNetwork
 
 # evaluation imports
 from sklearn.metrics import accuracy_score, classification_report
